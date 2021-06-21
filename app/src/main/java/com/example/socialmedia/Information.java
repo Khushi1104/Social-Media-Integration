@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
 import com.bumptech.glide.Glide;
@@ -19,14 +20,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserInfo;
-import com.squareup.picasso.Picasso;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 
 public class Information extends AppCompatActivity {
     private ImageView image;
@@ -35,6 +29,7 @@ public class Information extends AppCompatActivity {
     private TextView email;
     private FirebaseAuth mAuth;
     private FirebaseUser user;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,54 +41,43 @@ public class Information extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         user = mAuth.getCurrentUser();
         if (user != null) {
-            onSignedInInitialize();
-//
-//
-            name.setText(user.getDisplayName());
-            email.setText(user.getEmail());
+            for (UserInfo profile : user.getProviderData()) {
+                Uri photoUrl = profile.getPhotoUrl();
+                String originalPieceOfUrl = "s96-c";
+                String newPieceOfUrlToAdd = "s400-c";
+
+                if (photoUrl != null) {
+                    String photoPath = photoUrl.toString();
+                    String newString = " ";
+                    if(profile.getProviderId().equals("google.com")) {
+                        newString = photoPath.replace(originalPieceOfUrl, newPieceOfUrlToAdd);
+                    }else if(profile.getProviderId().equals("facebook.com")){
+                        newString = photoPath + "?height=500";
+                    }
+                    Log.i("TAG",newString);
+
+
+                    Glide.with(this)
+                            .load(newString)
+                            .into(image);
+                }
+                name.setText(user.getDisplayName());
+                email.setText(profile.getEmail());
+
+            }
+
+
+            logout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    FirebaseAuth.getInstance().signOut();
+                    Intent intent = new Intent(Information.this, MainActivity.class);
+                    Toast.makeText(Information.this, "Logout Successfully", Toast.LENGTH_SHORT).show();
+                    startActivity(intent);
+                    finish();
+                }
+            });
+
         }
-
-
-    logout.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            FirebaseAuth.getInstance().signOut();
-        Intent intent = new Intent(Information.this,MainActivity.class);
-        startActivity(intent);
-        finish();
-        }
-    });
-
     }
-
-    private void onSignedInInitialize() {
-        if(user.getDisplayName() != null && user.getDisplayName().length() > 0)
-        {
-            name.setText(user.getDisplayName());
-        }
-
-        String photoUrl;
-        String provider = user.getProviders().get(0);
-        if (provider.equals("facebook.com")) {
-            photoUrl = user.getPhotoUrl() + "?height=500";
-        }
-        else if(provider.equals("google.com"))
-        {
-            photoUrl = user.getPhotoUrl().toString();
-
-//Remove thumbnail url and replace the original part of the Url with the new part
-            photoUrl = photoUrl.substring(0, photoUrl.length() - 15) + "s400-c/photo.jpg";
-
-        }
-        else
-        {
-            photoUrl = user.getPhotoUrl().toString();
-        }
-
-        Picasso.with(this)
-                .load(photoUrl).placeholder(R.drawable.avatars).error(R.drawable.avatars).into(image);
-
-    }
-
-
 }
